@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoMoto Suivi</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:system-ui,Arial,sans-serif;background:#f4f6f8;color:#1d2330}
+header{background:#1d2330;color:#fff;padding:14px 20px}
+header h1{margin:0;font-size:20px}
+nav{display:flex;flex-wrap:wrap;gap:6px;background:#fff;padding:10px;border-bottom:1px solid #ddd}
+nav button{border:1px solid #c8d0da;background:#fff;padding:8px 12px;border-radius:6px;cursor:pointer;font-size:14px}
+nav button.active{background:#1d6fb8;color:#fff;border-color:#1d6fb8}
+main{padding:16px;max-width:900px;margin:0 auto}
+.section{display:none}
+.section.active{display:block}
+.card{background:#fff;border-radius:8px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card h2{margin:0 0 10px;font-size:17px}
+.form-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.form-row input,.form-row select,.form-row textarea{flex:1 1 160px;padding:8px;border:1px solid #c8d0da;border-radius:6px;font-size:14px;font-family:inherit}
+.btn{background:#1d6fb8;color:#fff;border:none;padding:9px 14px;border-radius:6px;cursor:pointer;font-size:14px}
+.btn.danger{background:#c0392b}
+.btn.light{background:#e6ebf1;color:#1d2330}
+.btn.small{padding:4px 8px;font-size:12px}
+.item{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;border-bottom:1px solid #eef1f5;padding:8px 0}
+.item:last-child{border-bottom:none}
+.muted{color:#666;font-size:13px}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.col{background:#eef1f5;border-radius:8px;padding:8px;min-height:120px}
+.col h3{margin:4px 2px 8px;font-size:15px}
+.job{background:#fff;border-radius:6px;padding:8px;margin-bottom:6px;font-size:14px}
+.job .actions{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap}
+.banner{display:none;padding:10px 14px;margin:12px 16px 0;border-radius:6px;font-size:14px}
+.banner.show{display:block}
+.warn{background:#fff3cd;color:#7a5a00;border:1px solid #f0d27a}
+.err{background:#f8d7da;color:#721c24;border:1px solid #f1aeb5}
+.total{font-weight:bold;margin-top:8px}
+@media(max-width:640px){.board{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>AutoMoto Suivi</h1></header>
+<div id="banner-warn" class="banner warn">Enregistrement automatique bloqué à cet endroit (aperçu ou navigation privée). Tu peux tout utiliser, mais pense à exporter tes données dans l'onglet Sauvegarde avant de fermer.</div>
+<div id="banner-err" class="banner err"></div>
+
+<nav>
+  <button data-tab="vehicles" class="active" onclick="if (!window.__cfRLUnblockHandlers) return false; showTab('vehicles')" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">Mes véhicules</button>
+  <button data-tab="repairs" onclick="if (!window.__cfRLUnblockHandlers) return false; showTab('repairs')" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">Réparations</button>
+  <button data-tab="parts" onclick="if (!window.__cfRLUnblockHandlers) return false; showTab('parts')" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">Pièces</button>
+  <button data-tab="service" onclick="if (!window.__cfRLUnblockHandlers) return false; showTab('service')" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">Carnet d'entretien</button>
+  <button data-tab="backup" onclick="if (!window.__cfRLUnblockHandlers) return false; showTab('backup')" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">Sauvegarde</button>
+</nav>
+
+<main>
+
+<!-- VÉHICULES -->
+<section id="tab-vehicles" class="section active">
+  <div class="card">
+    <h2>Ajouter un véhicule</h2>
+    <div class="form-row">
+      <select id="v-type"><option value="moto">Moto</option><option value="voiture">Voiture</option></select>
+      <input id="v-make" placeholder="Marque (ex. Yamaha, Renault)">
+      <input id="v-model" placeholder="Modèle (ex. MT-07, Clio)">
+    </div>
+    <div class="form-row">
+      <input id="v-plate" placeholder="Immatriculation (facultatif)">
+      <input id="v-km" type="number" min="0" placeholder="Kilométrage actuel">
+      <button class="btn" onclick="if (!window.__cfRLUnblockHandlers) return false; addVehicle()" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">Ajouter</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Mes véhicules</h2>
+    <div id="vehicle-list"></div>
+  </div>
+</section>
+
+<!-- RÉPARATIONS -->
+<section id="tab-repairs" class="section">
+  <div class="card">
+    <h2>Nouvelle réparation</h2>
+    <div class="form-row">
+      <select id="r-vid"></select>
+      <input id="r-title" placeholder="Ex. Changer les plaquettes avant">
+      <input id="r-km" type="number" min="0" placeholder="Km">
+    </div>
+    <div class="form-row">
+      <input id="r-notes" placeholder="Notes (facultatif)">
+      <button class="btn" onclick="if (!window.__cfRLUnblockHandlers) return false; addRepair()" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">Ajouter</button>
+    </div>
+  </div>
+  <div class="board">
+    <div class="col"><h3>À faire</h3><div id="col-todo"></div></div>
+    <div class="col"><h3>En cours</h3><div id="col-doing"></div></div>
+    <div class="col"><h3>Terminé</h3><div id="col-done"></div></div>
+  </div>
+</section>
+
+<!-- PIÈCES -->
+<section id="tab-parts" class="section">
+  <div class="card">
+    <h2>Ajouter une pièce</h2>
+    <div class="form-row">
+      <select id="p-vid"></select>
+      <select id="p-rid"></select>
+    </div>
+    <div class="form-row">
+      <input id="p-name" placeholder="Nom de la pièce">
+      <input id="p-price" type="number" min="0" step="0.01" placeholder="Prix (€)">
+      <button class="btn" onclick="if (!window.__cfRLUnblockHandlers) return false; addPart()" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">Ajouter</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Liste des pièces</h2>
+    <div id="part-list"></div>
+    <div id="part-total" class="total"></div>
+  </div>
+</section>
+
+<!-- ENTRETIEN -->
+<section id="tab-service" class="section">
+  <div class="card">
+    <h2>Ajouter un entretien</h2>
+    <div class="form-row">
+      <select id="s-vid"></select>
+      <input id="s-date" type="date">
+      <input id="s-km" type="number" min="0" placeholder="Kilométrage">
+    </div>
+    <div class="form-row">
+      <input id="s-type" placeholder="Type (ex. vidange, contrôle technique)">
+      <input id="s-notes" placeholder="Notes (facultatif)">
+      <button class="btn" onclick="if (!window.__cfRLUnblockHandlers) return false; addService()" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">Ajouter</button>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Carnet d'entretien</h2>
+    <div id="service-list"></div>
+  </div>
+</section>
+
+<!-- SAUVEGARDE -->
+<section id="tab-backup" class="section">
+  <div class="card">
+    <h2>Exporter mes données</h2>
+    <p class="muted">Télécharge un fichier de sauvegarde à garder sur une clé USB ou dans un cloud.</p>
+    <button class="btn" onclick="if (!window.__cfRLUnblockHandlers) return false; exportData()" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">Exporter</button>
+  </div>
+  <div class="card">
+    <h2>Importer une sauvegarde</h2>
+    <p class="muted">Attention : l'import remplace les données actuelles.</p>
+    <input type="file" accept=".json,application/json" onchange="if (!window.__cfRLUnblockHandlers) return false; importData(this)" data-cf-modified-52c8f5fd15e2d68cdd856ab7-="">
+  </div>
+</section>
+
+</main>
+
+<script type="52c8f5fd15e2d68cdd856ab7-text/javascript">
+var KEY = 'automoto-suivi-v1';
+var STATUS_LABEL = { todo: 'À faire', doing: 'En cours', done: 'Terminé' };
+var STATUS_ORDER = ['todo', 'doing', 'done'];
+var data = { vehicles: [], repairs: [], parts: [], services: [] };
+var canPersist = true;
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function el(id) { return document.getElementById(id); }
+function val(id) { return el(id).value.trim(); }
+function num(id) { var n = parseFloat(el(id).value); return isNaN(n) ? 0 : n; }
+function clearFields(ids) { ids.forEach(function (id) { el(id).value = ''; }); }
+function money(n) { return (Number(n) || 0).toFixed(2).replace('.', ',') + ' €'; }
+
+function load() {
+  try {
+    var raw = localStorage.getItem(KEY);
+    if (raw) {
+      var d = JSON.parse(raw);
+      data = {
+        vehicles: d.vehicles || [], repairs: d.repairs || [],
+        parts: d.parts || [], services: d.services || []
+      };
+    }
+  } catch (e) {
+    canPersist = false;
+  }
+}
+
+function save() {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(data));
+    canPersist = true;
+  } catch (e) {
+    canPersist = false;
+  }
+  el('banner-warn').classList.toggle('show', !canPersist);
+}
+
+function vehName(id) {
+  var v = data.vehicles.find(function (x) { return x.id === id; });
+  if (!v) return 'Véhicule supprimé';
+  return v.make + ' ' + v.model + (v.plate ? ' (' + v.plate + ')' : '');
+}
+function repairName(id) {
+  var r = data.repairs.find(function (x) { return x.id === id; });
+  return r ? r.title : '';
+}
+
+function vehOptions(selectId, placeholder) {
+  var html = '<option value="">' + placeholder + '</option>';
+  data.vehicles.forEach(function (v) {
+    html += '<option value="' + esc(v.id) + '">' + esc(v.make + ' ' + v.model) + '</option>';
+  });
+  el(selectId).innerHTML = html;
+}
+function repairOptions() {
+  var html = '<option value="">Réparation liée (facultatif)</option>';
+  data.repairs.forEach(function (r) {
+    html += '<option value="' + esc(r.id) + '">' + esc(r.title) + '</option>';
+  });
+  el('p-rid').innerHTML = html;
+}
+
+function showTab(name) {
+  document.querySelectorAll('.section').forEach(function (s) { s.classList.remove('active'); });
+  document.querySelectorAll('nav button').forEach(function (b) {
+    b.classList.toggle('active', b.getAttribute('data-tab') === name);
+  });
+  el('tab-' + name).classList.add('active');
+}
+
+/* ---------- Véhicules ---------- */
+function addVehicle() {
+  var make = val('v-make');
+  if (!make) { alert('Indique la marque du véhicule.'); return; }
+  data.vehicles.push({
+    id: uid(), type: val('v-type') || 'moto', make: make, model: val('v-model'),
+    plate: val('v-plate'), km: num('v-km')
+  });
+  save();
+  clearFields(['v-make', 'v-model', 'v-plate', 'v-km']);
+  renderAll();
+}
+
+function deleteVehicle(id) {
+  if (!confirm('Supprimer ce véhicule et tout ce qui le concerne ?')) return;
+  data.vehicles = data.vehicles.filter(function (v) { return v.id !== id; });
+  data.repairs = data.repairs.filter(function (r) { return r.vid !== id; });
+  data.parts = data.parts.filter(function (p) { return p.vid !== id; });
+  data.services = data.services.filter(function (s) { return s.vid !== id; });
+  save();
+  renderAll();
+}
+
+function renderVehicles() {
+  if (!data.vehicles.length) {
+    el('vehicle-list').innerHTML = '<p class="muted">Aucun véhicule pour le moment.</p>';
+    return;
+  }
+  el('vehicle-list').innerHTML = data.vehicles.map(function (v) {
+    return '<div class="item"><div><strong>' + esc(v.make + ' ' + v.model) + '</strong>' +
+      ' <span class="muted">' + (v.type === 'voiture' ? 'Voiture' : 'Moto') + '</span><br>' +
+      '<span class="muted">' + (v.plate ? esc(v.plate) + ' · ' : '') + (v.km || 0) + ' km</span></div>' +
+      '<button class="btn danger small" onclick="deleteVehicle(\'' + v.id + '\')">Supprimer</button></div>';
+  }).join('');
+}
+
+/* ---------- Réparations ---------- */
+function addRepair() {
+  var vid = val('r-vid'), title = val('r-title');
+  if (!vid) { alert('Choisis un véhicule.'); return; }
+  if (!title) { alert('Décris la réparation.'); return; }
+  data.repairs.push({
+    id: uid(), vid: vid, title: title, km: num('r-km'),
+    notes: val('r-notes'), status: 'todo'
+  });
+  save();
+  clearFields(['r-title', 'r-km', 'r-notes']);
+  renderAll();
+}
+
+function moveRepair(id, dir) {
+  var r = data.repairs.find(function (x) { return x.id === id; });
+  if (!r) return;
+  var i = STATUS_ORDER.indexOf(r.status) + dir;
+  if (i < 0 || i >= STATUS_ORDER.length) return;
+  r.status = STATUS_ORDER[i];
+  save();
+  renderAll();
+}
+
+function deleteRepair(id) {
+  if (!confirm('Supprimer cette réparation ?')) return;
+  data.repairs = data.repairs.filter(function (r) { return r.id !== id; });
+  data.parts.forEach(function (p) { if (p.rid === id) p.rid = ''; });
+  save();
+  renderAll();
+}
+
+function renderRepairs() {
+  var cols = { todo: '', doing: '', done: '' };
+  data.repairs.forEach(function (r) {
+    var i = STATUS_ORDER.indexOf(r.status);
+    var actions = '';
+    if (i > 0) actions += '<button class="btn light small" onclick="moveRepair(\'' + r.id + '\',-1)">←</button>';
+    if (i < STATUS_ORDER.length - 1) actions += '<button class="btn light small" onclick="moveRepair(\'' + r.id + '\',1)">→</button>';
+    actions += '<button class="btn danger small" onclick="deleteRepair(\'' + r.id + '\')">Supprimer</button>';
+    cols[r.status] += '<div class="job"><strong>' + esc(r.title) + '</strong><br>' +
+      '<span class="muted">' + esc(vehName(r.vid)) + (r.km ? ' · ' + r.km + ' km' : '') + '</span>' +
+      (r.notes ? '<br><span class="muted">' + esc(r.notes) + '</span>' : '') +
+      '<div class="actions">' + actions + '</div></div>';
+  });
+  el('col-todo').innerHTML = cols.todo || '<p class="muted">Rien ici</p>';
+  el('col-doing').innerHTML = cols.doing || '<p class="muted">Rien ici</p>';
+  el('col-done').innerHTML = cols.done || '<p class="muted">Rien ici</p>';
+}
+
+/* ---------- Pièces ---------- */
+function addPart() {
+  var vid = val('p-vid'), name = val('p-name');
+  if (!vid) { alert('Choisis un véhicule.'); return; }
+  if (!name) { alert('Indique le nom de la pièce.'); return; }
+  data.parts.push({
+    id: uid(), vid: vid, rid: val('p-rid'), name: name, price: num('p-price')
+  });
+  save();
+  clearFields(['p-name', 'p-price']);
+  renderAll();
+}
+
+function deletePart(id) {
+  data.parts = data.parts.filter(function (p) { return p.id !== id; });
+  save();
+  renderAll();
+}
+
+function renderParts() {
+  var total = 0;
+  if (!data.parts.length) {
+    el('part-list').innerHTML = '<p class="muted">Aucune pièce enregistrée.</p>';
+  } else {
+    el('part-list').innerHTML = data.parts.map(function (p) {
+      total += Number(p.price) || 0;
+      var linked = p.rid ? ' · ' + esc(repairName(p.rid)) : '';
+      return '<div class="item"><div><strong>' + esc(p.name) + '</strong> — ' + money(p.price) +
+        '<br><span class="muted">' + esc(vehName(p.vid)) + linked + '</span></div>' +
+        '<button class="btn danger small" onclick="deletePart(\'' + p.id + '\')">Supprimer</button></div>';
+    }).join('');
+  }
+  el('part-total').textContent = 'Total des pièces : ' + money(total);
+}
+
+/* ---------- Entretien ---------- */
+function addService() {
+  var vid = val('s-vid');
+  if (!vid) { alert('Choisis un véhicule.'); return; }
+  var type = val('s-type');
+  if (!type) { alert('Indique le type d\'entretien.'); return; }
+  data.services.push({
+    id: uid(), vid: vid, date: val('s-date') || new Date().toISOString().slice(0, 10),
+    km: num('s-km'), type: type, notes: val('s-notes')
+  });
+  save();
+  clearFields(['s-type', 's-km', 's-notes']);
+  renderAll();
+}
+
+function deleteService(id) {
+  data.services = data.services.filter(function (s) { return s.id !== id; });
+  save();
+  renderAll();
+}
+
+function renderService() {
+  if (!data.services.length) {
+    el('service-list').innerHTML = '<p class="muted">Aucun entretien enregistré.</p>';
+    return;
+  }
+  var sorted = data.services.slice().sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+  el('service-list').innerHTML = sorted.map(function (s) {
+    return '<div class="item"><div><strong>' + esc(s.type) + '</strong> — ' + esc(s.date) +
+      (s.km ? ' · ' + s.km + ' km' : '') +
+      '<br><span class="muted">' + esc(vehName(s.vid)) + (s.notes ? ' · ' + esc(s.notes) : '') + '</span></div>' +
+      '<button class="btn danger small" onclick="deleteService(\'' + s.id + '\')">Supprimer</button></div>';
+  }).join('');
+}
+
+/* ---------- Sauvegarde ---------- */
+function exportData() {
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'automoto-suivi-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+
+function importData(input) {
+  var f = input.files[0];
+  if (!f) return;
+  var reader = new FileReader();
+  reader.onload = function () {
+    try {
+      var d = JSON.parse(reader.result);
+      if (!d || !Array.isArray(d.vehicles)) throw new Error('format');
+      data = {
+        vehicles: d.vehicles || [], repairs: d.repairs || [],
+        parts: d.parts || [], services: d.services || []
+      };
+      save();
+      renderAll();
+      alert('Import réussi.');
+    } catch (e) {
+      alert('Ce fichier n\'est pas une sauvegarde AutoMoto Suivi valide.');
+    }
+  };
+  reader.readAsText(f);
+  input.value = '';
+}
+
+/* ---------- Rendu global ---------- */
+function renderAll() {
+  vehOptions('r-vid', '-- Choisir un véhicule --');
+  vehOptions('p-vid', '-- Choisir un véhicule --');
+  vehOptions('s-vid', '-- Choisir un véhicule --');
+  repairOptions();
+  renderVehicles();
+  renderRepairs();
+  renderParts();
+  renderService();
+}
+
+window.onerror = function (msg) {
+  var b = el('banner-err');
+  b.textContent = 'Le logiciel a rencontré une erreur : ' + msg;
+  b.classList.add('show');
+};
+
+load();
+save();
+renderAll();
+</script>
+<script src="/cdn-cgi/scripts/7d0fa10a/cloudflare-static/rocket-loader.min.js" data-cf-settings="52c8f5fd15e2d68cdd856ab7-|49" defer></script></body>
+</html>
